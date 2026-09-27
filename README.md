@@ -1,21 +1,34 @@
-# TechWiz MERN Starter
+# Campus Coin — NextGen BudgetBee
 
-Production-oriented MERN foundation: React + Vite + Tailwind CSS on the frontend, Express + MongoDB Atlas on the backend.
+Campus Coin is a student-first financial platform built with React + Vite + Tailwind CSS, Express, MongoDB Atlas, JWT HttpOnly cookies, Tesseract.js OCR, Gemini with Groq fallback, and Nodemailer. The interface follows the supplied `stitch_campus_coin_expense_tracker` reference system.
 
 ## Run locally
 
-1. Put your MongoDB Atlas application connection string in `backend/.env` as `MONGO_URI` and add a long random `JWT_SECRET`.
-2. In one terminal, open `frontend` and run `npm run dev`.
-3. In another terminal, open `backend` and run `npm run dev`.
+1. Copy `server/.env` to `server/.env` and configure MongoDB Atlas plus the secrets/integrations you plan to use. Set `ADMIN_EMAIL` and a unique `ADMIN_PASSWORD` (at least 12 characters); neither value is ever sent to the client.
+2. Copy `client/.env` to `client/.env`. Add the same Google web client ID if Google sign-in is required.
+3. Run `npm install` in the project root, then `npm run install:all`.
+4. Start the client and API together with `npm run dev`.
 
-The frontend runs at `http://localhost:5173`. Vite forwards all `/api/*` requests to `http://localhost:5000`. After Atlas is configured, verify the API at `http://localhost:5000/api/health`.
+The app runs at `https://studentscampuscoin.netlify.app`; the API runs at port `5000`.
 
-## Architecture
+## Administrator provisioning
 
-- Frontend route definitions live in `frontend/src/routes`; pages are in `pages`, reusable UI in `components`, and the shared Axios client in `lib/api.js`.
-- Backend controllers should handle requests, services should own business logic, models should define Mongoose schemas, and routes should only compose endpoints.
-- JWT verification is prepared to use an HTTP-only `token` cookie. Authentication endpoints can be added without changing the project foundation.
+The API safely provisions the configured administrator after it connects to MongoDB Atlas. It creates the account only when the configured email is missing, hashes the password with bcrypt, and leaves an existing password unchanged. To provision it explicitly, run:
 
-## Atlas safety
+```bash
+npm run create-admin --prefix server
+```
 
-Create an Atlas database user and allow your current IP in Network Access. Use an application URI such as `mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/techwiz`; URL-encode special characters in the password. Never commit real secrets—`.env` is ignored and `.env.example` is safe to share.
+Administrators sign in at `/admin/login`. This endpoint rejects student accounts, while all `/api/admin/*` routes require the verified session and the database-backed `admin` role.
+
+## Security and ownership
+
+- Session JWTs are issued only in the `campus_coin_session` HTTP-only cookie. They are not written to browser storage.
+- Every student query uses the user identity from a verified JWT—not a frontend-supplied user id.
+- Google ID tokens are verified server-side with `google-auth-library`.
+- The production cookie uses `Secure` and `SameSite=None`; development uses `SameSite=Lax` for localhost.
+- API middleware includes Helmet, CORS credentials, rate limiting, password hashing, safe errors, and in-memory constrained uploads.
+
+## Required integrations
+
+MongoDB Atlas is essential. Configure `GEMINI_API_KEY` and `GROQ_API_KEY` in `server/.env` for AI features. Gemini is tried first; Groq is used when Gemini is unavailable or rate-limited. `GROQ_MODEL` is optional and defaults to `openai/gpt-oss-120b`. If both AI providers are unavailable, features with a local rule-based fallback continue to use only the student's saved data. Google sign-in and SMTP also require their server-only environment variables.

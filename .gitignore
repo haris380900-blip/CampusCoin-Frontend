@@ -1,8 +1,9 @@
 node_modules/
 .env
 .env.*
-!.env.example
+!.env
+/server/.env
+uploads/
 dist/
 coverage/
-uploads/
 *.log
